@@ -1,23 +1,26 @@
 from airflow import DAG
-from airflow.providers.dbt.cloud.operators.dbt import DbtRunOperator
-from airflow.utils.dates import days_ago
+from airflow.operators.bash import BashOperator
+from datetime import datetime
 
-DBT_PROJECT_DIR = "/appz/home/airflow/dags/dbt/ai_lab"  
-DBT_PROFILES_DIR = "/appz/home/airflow/dags/dbt/ai_lab"  
+DBT_PROJECT_PATH = "/appz/home/airflow/dags/dbt/ai_lab"
+DBT_EXECUTABLE = "/dbt_venv/bin/dbt"
+
+default_args = {
+    "owner": "airflow",
+    "start_date": datetime(2025, 2, 24),
+    "retries": 1,
+}
 
 with DAG(
     dag_id="dbt_order_update",
-    schedule_interval=None,  
-    start_date=days_ago(1),
+    default_args=default_args,
+    schedule_interval="@daily",
     catchup=False,
-    tags=["dbt", "postgres"],
 ) as dag:
-    
-    run_dbt = DbtRunOperator(
-        task_id="run_dbt_order_update",
-        project_dir=DBT_PROJECT_DIR,
-        profiles_dir=DBT_PROFILES_DIR,
-        models="transformations.order_update",
+
+    dbt_run = BashOperator(
+        task_id="dbt_run",
+        bash_command=f"cd {DBT_PROJECT_PATH} && {DBT_EXECUTABLE} run --select transformations.order_update",
     )
 
-    run_dbt
+    dbt_run
