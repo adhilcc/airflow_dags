@@ -1,22 +1,20 @@
 from airflow import DAG
-from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
 from airflow.models import Variable
 from datetime import datetime
 
-# Retrieve password variable from Airflow
-password = Variable.get("command", default_var="No password set")
+def print_password():
+    password = Variable.get("password", default_var="NOT SET")
+    print(f"Password: {password}")
 
-# Define DAG
 with DAG(
-    dag_id="echo_airflow_variable_password",
+    "echo_airflow_password",
+    schedule_interval=None,
     start_date=datetime(2024, 1, 1),
-    schedule_interval=None,  # Run manually
     catchup=False,
 ) as dag:
 
-    echo_password = BashOperator(
+    echo_password = PythonOperator(
         task_id="echo_password",
-        bash_command=f'echo "Password: {password}"',
+        python_callable=print_password,
     )
-
-    echo_password
