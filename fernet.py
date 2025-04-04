@@ -4,7 +4,7 @@ from airflow.models import Variable
 from datetime import datetime
 
 # Retrieve password variable from Airflow
-password = Variable.get("password", default_var="No password set")
+password = Variable.get("command", default_var="No password set")
 
 # Define DAG
 with DAG(
