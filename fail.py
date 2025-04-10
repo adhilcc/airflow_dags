@@ -4,7 +4,7 @@ from datetime import datetime
 
 # Define the DAG
 with DAG(
-    dag_id='failing_dag',
+    dag_id='eng_esg',
     start_date=datetime(2025, 4, 1),  # Set to a past date for immediate execution
     schedule_interval=None,           # No schedule, run manually
     catchup=False,                    # Avoid backfilling
@@ -18,6 +18,6 @@ with DAG(
 
     # Create a failing task
     failing_task = PythonOperator(
-        task_id='fail_task',
+        task_id='data_load',
         python_callable=fail_task,
     )
