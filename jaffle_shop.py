@@ -33,7 +33,7 @@ def on_failure_callback(context,SVC_NAME):
 profile_config = ProfileConfig(
     profile_name="jaffle_shop",
     target_name="dev",
-    profiles_yml_filepath = "/appz/home/airflow/dags/dbt/jaffle_shop/profiles.yml",
+    profiles_yml_filepath = "/appz/home/airflow/dags/jaffle_shop/profiles.yml",
 )
 
 def print_variable(**kwargs):
@@ -62,7 +62,7 @@ with DAG(
 
     seeds_tg = DbtTaskGroup(
         project_config=ProjectConfig(
-        Path("/appz/home/airflow/dags/dbt/jaffle_shop"),
+        Path("/appz/home/airflow/dags/jaffle_shop"),
     ),
         operator_args={
             "append_env": True,
@@ -80,7 +80,7 @@ with DAG(
 
     stg_tg = DbtTaskGroup(
         project_config=ProjectConfig(
-        Path("/appz/home/airflow/dags/dbt/jaffle_shop"),
+        Path("/appz/home/airflow/dags/jaffle_shop"),
     ),
         operator_args={
             "append_env": True,
@@ -99,7 +99,7 @@ with DAG(
 
     dbt_tg = DbtTaskGroup(
         project_config=ProjectConfig(
-        Path("/appz/home/airflow/dags/dbt/jaffle_shop"),
+        Path("/appz/home/airflow/dags/jaffle_shop"),
     ),
         operator_args={
             "append_env": True,
