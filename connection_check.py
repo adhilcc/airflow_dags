@@ -24,7 +24,7 @@ with DAG(
     # Task to run dbt debug
     run_dbt_debug = BashOperator(
         task_id='run_dbt_debug',
-        bash_command='source /dbt_venv/bin/activate && cd /appz/home/airflow/dags/data-engineering && dbt debug',
+        bash_command='source /dbt_venv/bin/activate && cd /appz/home/airflow/dags/data-engineering/nyc_parking_violations && dbt debug',
     )
 
     # Define task dependencies (single task in this case)
