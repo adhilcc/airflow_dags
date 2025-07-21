@@ -25,4 +25,4 @@ with DAG(
 
     dbt_run
 
-#test_MAIL
+#test_mail
