@@ -8,6 +8,7 @@ from airflow.models import Variable
 from cosmos import DbtTaskGroup, RenderConfig
 from cosmos.config import ProfileConfig, ProjectConfig, ExecutionConfig
 from cosmos.profiles import PostgresUserPasswordProfileMapping
+from cosmos.constants import ExecutionMode
 from pathlib import Path
 import os
 
@@ -70,7 +71,7 @@ with DAG(
         profile_config=profile_config,
         execution_config=ExecutionConfig(
         dbt_executable_path="/dbt_venv/bin/dbt",
-        execution_mode="subprocess",
+        execution_mode=ExecutionMode.SUBPROCESS,
     ),
         render_config=RenderConfig(
         select=["path:seeds/"],
@@ -89,7 +90,7 @@ with DAG(
         profile_config=profile_config,
         execution_config=ExecutionConfig(
         dbt_executable_path="/dbt_venv/bin/dbt",
-        execution_mode="subprocess",
+        execution_mode=ExecutionMode.SUBPROCESS,
     ),
         render_config=RenderConfig(
         select=["path:models/staging/"],
@@ -110,7 +111,7 @@ with DAG(
         profile_config=profile_config,
         execution_config=ExecutionConfig(
         dbt_executable_path="/dbt_venv/bin/dbt",
-        execution_mode="subprocess",
+        execution_mode=ExecutionMode.SUBPROCESS,
     ),
         render_config=RenderConfig(
         exclude=["path:models/staging","path:seeds/"],
