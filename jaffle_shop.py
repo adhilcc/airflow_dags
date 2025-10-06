@@ -70,7 +70,6 @@ with DAG(
         profile_config=profile_config,
         execution_config=ExecutionConfig(
         dbt_executable_path="/dbt_venv/bin/dbt",
-        use_subprocess=True, # Explicitly use subprocess
     ),
         render_config=RenderConfig(
         select=["path:seeds/"],
@@ -89,7 +88,6 @@ with DAG(
         profile_config=profile_config,
         execution_config=ExecutionConfig(
         dbt_executable_path="/dbt_venv/bin/dbt",
-        use_subprocess=True, # Explicitly use subprocess
     ),
         render_config=RenderConfig(
         select=["path:models/staging/"],
@@ -110,7 +108,6 @@ with DAG(
         profile_config=profile_config,
         execution_config=ExecutionConfig(
         dbt_executable_path="/dbt_venv/bin/dbt",
-        use_subprocess=True, # Explicitly use subprocess
     ),
         render_config=RenderConfig(
         exclude=["path:models/staging","path:seeds/"],
