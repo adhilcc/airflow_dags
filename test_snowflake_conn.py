@@ -1,20 +1,18 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
 from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
+from airflow.operators.python import PythonOperator
 from datetime import datetime
 
 def test_sf(**kwargs):
     hook = SnowflakeHook(snowflake_conn_id="TEST_SF")
-    conn = hook.get_conn()    # <-- ERROR happens here in 2.11
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1")
-    print(cursor.fetchall())
+    params = hook._get_conn_params() 
+    print(params)
 
 with DAG(
-    dag_id="test_snowflake_conn",
+    "test_snowflake_conn",
     start_date=datetime(2023, 1, 1),
     schedule=None,
-    catchup=False,
+    catchup=False
 ) as dag:
 
     PythonOperator(
