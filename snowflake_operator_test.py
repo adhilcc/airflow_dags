@@ -1,0 +1,17 @@
+from datetime import datetime
+from airflow import DAG
+from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+
+
+with DAG(
+    dag_id="snowflake_operator_test",
+    start_date=datetime(2024, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+) as dag:
+
+    run_snowflake = SnowflakeOperator(
+        task_id="run_old_snowflake_op",
+        snowflake_conn_id="snowflake_default",
+        sql="SELECT CURRENT_TIMESTAMP();"
+    )
