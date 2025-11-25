@@ -1,6 +1,6 @@
 from datetime import datetime
 from airflow import DAG
-from airflow.providers.snowflake.operators.snowflake import SnowflakeOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
 
 with DAG(
@@ -10,7 +10,7 @@ with DAG(
     catchup=False,
 ) as dag:
 
-    run_snowflake = SnowflakeOperator(
+    run_snowflake = SQLExecuteQueryOperator(
         task_id="run_old_snowflake_op",
         snowflake_conn_id="snowflake_default",
         sql="SELECT CURRENT_TIMESTAMP();"
