@@ -11,7 +11,7 @@ with DAG(
 ) as dag:
 
     run_snowflake = SQLExecuteQueryOperator(
-        task_id="run_old_snowflake_op",
-        snowflake_conn_id="snowflake_default",
+        task_id="run_snowflake_op",
+        conn_id="snowflake_default",
         sql="SELECT CURRENT_TIMESTAMP();"
     )
