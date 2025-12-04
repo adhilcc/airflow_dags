@@ -19,7 +19,7 @@ with DAG(
     start = EmptyOperator(task_id="start")
 
     wait_30_seconds = TimeSensorAsync(
-        task_id="wait_30_seconds_deferrable",
+        task_id="wait_60_seconds_deferrable",
         target_time=(datetime.utcnow() + timedelta(seconds=60)).time(),
         poke_interval=5,
         timeout=120,
