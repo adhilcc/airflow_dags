@@ -1,36 +1,31 @@
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.sensors.time_sensor import TimeSensorAsync  # deferrable sensor
+from airflow.sensors.time_sensor import TimeSensorAsync
 from airflow.operators.empty import EmptyOperator
 
-default_args = {
-    'owner': 'airflow',
-    'depends_on_past': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=1),
-}
-
 with DAG(
-    dag_id='test_triggerer',
-    default_args=default_args,
-    description='Simple DAG to test Airflow Triggerer with deferrable sensor',
-    schedule_interval=None,  # manual trigger only
-    start_date=datetime(2025, 12, 4),
+    dag_id="test_triggerer",
+    description="Test that the Triggerer works using TimeSensorAsync (deferrable)",
+    schedule=None,                               # manual trigger only
+    start_date=datetime(2025, 1, 1),
     catchup=False,
-    tags=['test', 'triggerer'],
+    tags=["test", "triggerer", "deferrable"],
+    default_args={
+        "owner": "airflow",
+        "retries": 0,
+    },
 ) as dag:
 
-    start = EmptyOperator(task_id='start')
+    start = EmptyOperator(task_id="start")
 
-    # This sensor waits 50 seconds asynchronously → should defer to Triggerer
-    wait_async = TimeSensorAsync(
-        task_id='wait_30_seconds_async',
-        target_time="{{ execution_date.add(seconds=50).time() }}",  # wait 30s from start
-        poke_interval=5,  # check every 5s
-        timeout=60,       # max wait 60s
-        mode='reschedule',  # required for deferral
+    wait_30_seconds = TimeSensorAsync(
+        task_id="wait_30_seconds_deferrable",
+        target_time=(datetime.utcnow() + timedelta(seconds=60)).time(),
+        poke_interval=5,
+        timeout=120,
+        mode="reschedule",   # required for deferral
     )
 
-    end = EmptyOperator(task_id='end')
+    end = EmptyOperator(task_id="end")
 
-    start >> wait_async >> end
+    start >> wait_30_seconds >> end
