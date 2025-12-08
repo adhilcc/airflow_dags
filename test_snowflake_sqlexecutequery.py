@@ -39,7 +39,7 @@ with DAG(
     test_stored_proc = SQLExecuteQueryOperator(
         task_id="test_stored_procedure",
         conn_id="snowflake_default",
-        sql="CALL SYSTEM$GET_SNOWFLAKE_PLATFORM_INFO();"
+        sql="CALL SYSTEM$WAIT(1);"
     )
 
     # Jinja Template Test
