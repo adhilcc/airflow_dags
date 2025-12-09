@@ -34,7 +34,7 @@ def test_hook_run_parameters():
     
     # Named params: :key with dict
     cursor.execute(
-        "SELECT :value AS PARAM_TEST",
+        "SELECT %(value)s AS PARAM_TEST",
         {"value": 123}
     )
     result = cursor.fetchall()
@@ -42,7 +42,7 @@ def test_hook_run_parameters():
     
     cursor.close()
     conn.close()
-    
+
 with DAG(
     dag_id="test_snowflake_hook_full",
     start_date=datetime(2024, 1, 1),
