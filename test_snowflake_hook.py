@@ -29,7 +29,6 @@ def test_hook_run_multiple():
 
 def test_hook_run_parameters():
     hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
-    cursor.execute("SELECT ? AS PARAM_TEST", (123,))
     result = hook.run("SELECT ? AS PARAM_TEST", parameters=(123,))
     print("PARAMETERIZED QUERY RESULT:", result)
 
