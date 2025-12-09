@@ -31,14 +31,12 @@ def test_hook_run_parameters():
     hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
     conn = hook.get_conn()
     cursor = conn.cursor()
-    
-    # Named params: :key with dict
     cursor.execute(
         "SELECT %(value)s AS PARAM_TEST",
         {"value": 123}
     )
     result = cursor.fetchall()
-    print("PARAMETERIZED QUERY RESULT:", result)  # [(123,)]
+    print("PARAMETERIZED QUERY RESULT:", result)
     
     cursor.close()
     conn.close()
