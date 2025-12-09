@@ -29,8 +29,8 @@ def test_hook_run_multiple():
 
 def test_hook_run_parameters():
     hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
-    sql = "SELECT :value as PARAM_TEST"
-    result = hook.run(sql, parameters={"value": 123})
+    sql = "SELECT ? AS PARAM_TEST"
+    result = hook.run(sql, parameters=[123])
     print("PARAMETERIZED QUERY RESULT:", result)
 
 with DAG(
