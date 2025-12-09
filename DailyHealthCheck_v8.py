@@ -62,7 +62,7 @@ with DAG(
             BashOperator(
                 task_id="onprem_worker_check",
                 bash_command="echo On-Prem Worker Check; date",
-                queue="on-premises",
+                queue="default",
             )
 
 
