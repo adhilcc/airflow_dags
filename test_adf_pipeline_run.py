@@ -21,23 +21,23 @@ local_tz = pendulum.timezone("UTC")
 def test_adf_hook():
     hook = AzureDataFactoryHook(azure_data_factory_conn_id="azure_data_factory_default")
 
-    # List pipelines
-    pipelines = hook.list_pipelines(
+    # Get pipeline details
+    pipelines = hook.get_pipeline(
+        pipeline_name="AirflowTestPipeline",
         resource_group_name="rg-airflow-adf-test",
         factory_name="ad-airflow-test"
     )
-    print("PIPELINES FOUND:", [p.name for p in pipelines])
+    print("PIPELINE DEFINITION:", pipeline)
 
-    # This should trigger pipeline again using hook (small test)
-    run_resp = hook.run_pipeline(
+    # Get pipeline run result
+    run_id = kwargs['ti'].xcom_pull(task_ids='run_adf_pipeline', key='run_id')
+    pipeline_run = hook.get_pipeline_run(
+        run_id=run_id,
         resource_group_name="rg-airflow-adf-test",
         factory_name="ad-airflow-test",
-        pipeline_name="AirflowTestPipeline",
-        parameters={}
     )
 
-    print("HOOK PIPELINE RUN RESPONSE:", run_resp)
-    return run_resp.run_id  # return for debugging
+    print("PIPELINE RUN STATUS:", pipeline_run.status)
 
 
 with DAG(
