@@ -19,6 +19,8 @@ with DAG(
         task_id="run_adf_pipeline",
         pipeline_name="AirflowTestPipeline",
         azure_data_factory_conn_id="azure_data_factory_default",
+        factory_name="ad-airflow-test",
+        resource_group_name="rg-airflow-adf-test",
         wait_for_termination=True,     # Airflow waits for pipeline to finish
         check_interval=10,             # Poll every 10 seconds
         timeout=600,                   # Stop waiting after 10 minutes
