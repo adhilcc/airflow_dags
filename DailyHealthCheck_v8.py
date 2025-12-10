@@ -7,12 +7,14 @@ from airflow.utils.task_group import TaskGroup
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.snowflake.hooks.snowflake import SnowflakeHook
 from airflow.operators.python import PythonOperator
+from airflow.providers.microsoft.azure.operators.data_factory import AzureDataFactoryRunPipelineOperator
+from airflow.providers.microsoft.azure.sensors.data_factory import AzureDataFactoryPipelineRunStatusSensor
+from airflow.providers.microsoft.azure.hooks.data_factory import AzureDataFactoryHook
 import os
 
 
-# ------------------------------------------------------
 # Environment + Defaults
-# ------------------------------------------------------
+
 ENVIRONMENT = Variable.get("AIRFLOW_OPS_DEPLOY_ENV", default_var="DEFAULT")
 run_on_prem_task = (ENVIRONMENT == "AKS-DEV")
 
@@ -26,29 +28,25 @@ default_args = {
     'email_on_retry': False,
 }
 
-# Read README.md for documentation
+# Read README.md
 readme_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'README.md')
 with open(readme_path, 'r') as file:
     readme_content = file.read()
 
 
-# ------------------------------------------------------
-# DAG Definition
-# ------------------------------------------------------
 with DAG(
-    dag_id="DailyHealthCheck_v9",
+    dag_id="DailyHealthCheck_v8",
     default_args=default_args,
     start_date=datetime(2024, 2, 9, tzinfo=local_tz),
-    schedule_interval="0 */1 * * *",  # Runs every hour
+    schedule_interval="0 */1 * * *",
     catchup=False,
-    description="Health Check DAG including Worker Checks + Snowflake Tests",
-    tags=["OPS", "HEALTHCHECK", "SNOWFLAKE"],
+    description="Health Check DAG including Worker, Snowflake & ADF Tests",
+    tags=["OPS", "HEALTHCHECK"],
     doc_md=readme_content
 ) as dag:
 
-    # ------------------------------------------------------
     # WORKER HEALTH CHECK GROUP
-    # ------------------------------------------------------
+
     with TaskGroup("WORKER") as worker_tasks:
 
         for i in range(1, 7):
@@ -65,10 +63,8 @@ with DAG(
                 queue="default",
             )
 
+    # SNOWFLAKE SQL OPERATOR TESTS
 
-    # ------------------------------------------------------
-    # SNOWFLAKE SQLExecuteQueryOperator Tests
-    # ------------------------------------------------------
     with TaskGroup("SNOWFLAKE_SQL_OPERATOR_TESTS") as sql_operator_tests:
 
         test_auth = SQLExecuteQueryOperator(
@@ -108,10 +104,8 @@ with DAG(
 
         test_auth >> test_select >> test_dml >> test_stored_proc >> test_templated_sql
 
+    # SNOWFLAKE HOOK TESTS
 
-    # ------------------------------------------------------
-    # SNOWFLAKE HOOK TESTS (Private key, run(), multi, parameters)
-    # ------------------------------------------------------
     def test_private_key_auth():
         hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
         conn = hook.get_conn()
@@ -122,17 +116,14 @@ with DAG(
         hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
         conn = hook.get_conn()
         cursor = conn.cursor()
-
         cursor.execute("SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_WAREHOUSE();")
         print("BASIC QUERY RESULT:", cursor.fetchall())
-
         cursor.close()
         conn.close()
 
     def test_hook_run():
         hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
-        result = hook.run("SELECT CURRENT_TIMESTAMP();")
-        print("RUN() RESULT:", result)
+        print("RUN() RESULT:", hook.run("SELECT CURRENT_TIMESTAMP();"))
 
     def test_hook_run_multiple():
         hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
@@ -141,51 +132,74 @@ with DAG(
             "INSERT INTO HOOK_TEST VALUES (1);",
             "SELECT COUNT(*) FROM HOOK_TEST;"
         ]
-        result = hook.run(sql_list, autocommit=True)
-        print("MULTIPLE RESULT:", result)
+        print("MULTIPLE RESULT:", hook.run(sql_list, autocommit=True))
 
     def test_hook_run_parameters():
         hook = SnowflakeHook(snowflake_conn_id="snowflake_default")
         conn = hook.get_conn()
         cursor = conn.cursor()
-
         cursor.execute("SELECT %(value)s AS PARAM_TEST", {"value": 123})
         print("PARAM RESULT:", cursor.fetchall())
-
         cursor.close()
         conn.close()
 
     with TaskGroup("SNOWFLAKE_HOOK_TESTS") as hook_tests:
 
-        hook_pk = PythonOperator(
-            task_id="test_private_key_auth",
-            python_callable=test_private_key_auth
-        )
-
-        hook_basic = PythonOperator(
-            task_id="test_hook_basic",
-            python_callable=test_hook_basic
-        )
-
-        hook_run = PythonOperator(
-            task_id="test_hook_run",
-            python_callable=test_hook_run
-        )
-
-        hook_multi = PythonOperator(
-            task_id="test_hook_run_multiple",
-            python_callable=test_hook_run_multiple
-        )
-
-        hook_params = PythonOperator(
-            task_id="test_hook_run_parameters",
-            python_callable=test_hook_run_parameters
-        )
+        hook_pk = PythonOperator(task_id="test_private_key_auth", python_callable=test_private_key_auth)
+        hook_basic = PythonOperator(task_id="test_hook_basic", python_callable=test_hook_basic)
+        hook_run = PythonOperator(task_id="test_hook_run", python_callable=test_hook_run)
+        hook_multi = PythonOperator(task_id="test_hook_run_multiple", python_callable=test_hook_run_multiple)
+        hook_params = PythonOperator(task_id="test_hook_run_parameters", python_callable=test_hook_run_parameters)
 
         hook_pk >> hook_basic >> hook_run >> hook_multi >> hook_params
 
+    # ADF TESTS
 
-    # ------------------------------------------------------
-    # FLOW: Worker → SQL Tests → Hook Tests
-    # ------------------------------------------------------
-    worker_tasks >> sql_operator_tests >> hook_tests
+    def adf_hook_test(**kwargs):
+        hook = AzureDataFactoryHook(azure_data_factory_conn_id="azure_data_factory_default")
+        pipeline = hook.get_pipeline(
+            pipeline_name="AirflowTestPipeline",
+            resource_group_name="rg-airflow-adf-test",
+            factory_name="ad-airflow-test"
+        )
+        print("PIPELINE:", pipeline)
+
+        run_id = kwargs["ti"].xcom_pull(task_ids="ADF_TESTS.run_adf_pipeline", key="run_id")
+
+        pipeline_run = hook.get_pipeline_run(
+            run_id=run_id,
+            resource_group_name="rg-airflow-adf-test",
+            factory_name="ad-airflow-test",
+        )
+        print("RUN STATUS:", pipeline_run.status)
+
+    with TaskGroup("ADF_TESTS") as adf_tests:
+
+        run_pipeline = AzureDataFactoryRunPipelineOperator(
+            task_id="run_adf_pipeline",
+            pipeline_name="AirflowTestPipeline",
+            azure_data_factory_conn_id="azure_data_factory_default",
+            factory_name="ad-airflow-test",
+            resource_group_name="rg-airflow-adf-test",
+            wait_for_termination=False,
+        )
+
+        wait_pipeline = AzureDataFactoryPipelineRunStatusSensor(
+            task_id="wait_for_pipeline",
+            azure_data_factory_conn_id="azure_data_factory_default",
+            factory_name="ad-airflow-test",
+            resource_group_name="rg-airflow-adf-test",
+            run_id="{{ ti.xcom_pull(task_ids='ADF_TESTS.run_adf_pipeline', key='run_id') }}",
+            poke_interval=10,
+            timeout=600,
+        )
+
+        test_adf_hook = PythonOperator(
+            task_id="test_adf_hook",
+            python_callable=adf_hook_test,
+        )
+
+        run_pipeline >> wait_pipeline >> test_adf_hook
+
+
+    worker_tasks >> sql_operator_tests >> hook_tests >> adf_tests
