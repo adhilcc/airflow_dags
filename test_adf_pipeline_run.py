@@ -18,7 +18,7 @@ local_tz = pendulum.timezone("UTC")
 # -------------------------------
 # Test 3: Azure Data Factory Hook
 # -------------------------------
-def test_adf_hook():
+def test_adf_hook(**kwargs):
     hook = AzureDataFactoryHook(azure_data_factory_conn_id="azure_data_factory_default")
 
     # Get pipeline details
