@@ -68,7 +68,7 @@ with DAG(
         azure_data_factory_conn_id="azure_data_factory_default",
         factory_name="ad-airflow-test",
         resource_group_name="rg-airflow-adf-test",
-        run_id="{{ ti.xcom_pull(task_ids='run_adf_pipeline')['run_id'] }}",
+        run_id="{{ ti.xcom_pull(task_ids='run_adf_pipeline', key='run_id') }}",
         poke_interval=10,
         timeout=600,
     )
