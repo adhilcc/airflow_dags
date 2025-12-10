@@ -22,7 +22,7 @@ def test_adf_hook():
     hook = AzureDataFactoryHook(azure_data_factory_conn_id="azure_data_factory_default")
 
     # Get pipeline details
-    pipelines = hook.get_pipeline(
+    pipeline = hook.get_pipeline(
         pipeline_name="AirflowTestPipeline",
         resource_group_name="rg-airflow-adf-test",
         factory_name="ad-airflow-test"
