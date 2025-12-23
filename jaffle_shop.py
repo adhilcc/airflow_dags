@@ -57,7 +57,7 @@ with DAG(
 ):
     e1 = PythonOperator(task_id = "print_variables",
                         python_callable = print_variable,
-                        provide_context=True,
+                        # provide_context=True, Remove this in airflow 3x
                        )
 
     seeds_tg = DbtTaskGroup(
