@@ -38,7 +38,7 @@ with DAG(
     dag_id="DailyHealthCheck_v8",
     default_args=default_args,
     start_date=datetime(2024, 2, 9, tzinfo=local_tz),
-    schedule_interval="0 */1 * * *",
+    schedule="0 */1 * * *",
     catchup=False,
     description="Health Check DAG including Worker, Snowflake & ADF Tests",
     tags=["OPS", "HEALTHCHECK"],

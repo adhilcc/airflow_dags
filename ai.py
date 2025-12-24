@@ -14,7 +14,7 @@ default_args = {
 with DAG(
     dag_id="dbt_order_update",
     default_args=default_args,
-    schedule_interval="@daily",
+    schedule="@daily",
     catchup=False,
 ) as dag:
 

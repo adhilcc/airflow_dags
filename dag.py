@@ -13,7 +13,7 @@ default_args = {
 with DAG(
     dag_id='print_date_dag',
     default_args=default_args,
-    schedule_interval='@daily',
+    schedule='@daily',
     catchup=False
 ) as dag:
     

@@ -6,7 +6,7 @@ from datetime import datetime
 with DAG(
     dag_id='eng_esg',
     start_date=datetime(2025, 4, 1),  # Set to a past date for immediate execution
-    schedule_interval=None,           # No schedule, run manually
+    schedule=None,           # No schedule, run manually
     catchup=False,                    # Avoid backfilling
     tags=['test', 'failure'],
 ) as dag:

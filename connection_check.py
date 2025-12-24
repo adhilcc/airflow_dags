@@ -16,7 +16,7 @@ with DAG(
     'dbt_debug_dag',
     default_args=default_args,
     description='A DAG to run dbt debug command',
-    schedule_interval=None,  # Run manually
+    schedule=None,  # Run manually
     start_date=datetime(2025, 6, 11),
     catchup=False,
 ) as dag:

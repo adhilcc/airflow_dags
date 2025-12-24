@@ -9,7 +9,7 @@ def print_password():
 
 with DAG(
     "echo_airflow_password",
-    schedule_interval=None,
+    schedule=None,
     start_date=datetime(2024, 1, 1),
     catchup=False,
 ) as dag:
