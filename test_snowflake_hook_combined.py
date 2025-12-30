@@ -90,7 +90,7 @@ def test_hook_run_parameters():
 # DAG DEFINITION
 # -------------------------------------------------------------------
 with DAG(
-    dag_id="test_snowflake_hook_combined",
+    dag_id="test_snowflake_hook_and_conn",
     start_date=datetime(2024, 1, 1, tzinfo=local_tz),
     schedule=None,
     catchup=False,
