@@ -87,23 +87,32 @@ def gem_row_counts(**_):
     prev_id = int(Variable.get("GEM_PREV_MAX_EVENT_ID", default_var="0") or 0)
     Variable.set("GEM_PREV_MAX_EVENT_ID", str(max_id))
     delta = max_id - prev_id
-    r = ["================= GEM PIPELINE REPORT (last 24h) ================="]
-    r.append(f"  liveness      : latest event_id={max_id}  (+{delta} since last check)")
-    r.append(f"  last event at : {last_ts}")
-    r.append(f"  DAGs tracked  : {dags_tracked}   |   DAGs active (24h): {active_dags}")
-    r.append(f"  runs started  : {started}")
-    r.append(f"  runs success  : {succeeded}")
-    r.append(f"  runs failed   : {failed}")
-    r.append(f"  success rate  : {rate}  ({succeeded}/{completed} completed)")
-    r.append(f"  task failures : {task_failed}")
+    # ANSI colour so the report stands out from surrounding logs. Toggle off with the
+    # GEM_REPORT_COLOR Variable = "0" if your log viewer shows raw escape codes.
+    use_color = Variable.get("GEM_REPORT_COLOR", default_var="1") == "1"
+
+    def col(s, code):
+        return f"\033[{code}m{s}\033[0m" if use_color else s
+
+    CYAN, GREEN, YELLOW, RED, TITLE = "96", "92", "93", "91", "1;96"
+    r = [col("================= GEM PIPELINE REPORT (last 24h) =================", TITLE)]
+    r.append(col(f"  liveness      : latest event_id={max_id}  (+{delta} since last check)", CYAN))
+    r.append(col(f"  last event at : {last_ts}", CYAN))
+    r.append(col(f"  DAGs tracked  : {dags_tracked}   |   DAGs active (24h): {active_dags}", CYAN))
+    r.append(col(f"  runs started  : {started}", CYAN))
+    r.append(col(f"  runs success  : {succeeded}", CYAN))
+    r.append(col(f"  runs failed   : {failed}", RED if failed else CYAN))
+    r.append(col(f"  success rate  : {rate}  ({succeeded}/{completed} completed)", CYAN))
+    r.append(col(f"  task failures : {task_failed}", RED if task_failed else CYAN))
     if top_fail:
-        r.append("  top failing DAGs (24h):")
+        r.append(col("  top failing DAGs (24h):", CYAN))
         for d, n in top_fail:
-            r.append(f"      - {d}: {n}")
-    r.append("==================================================================")
-    r.append("OK: new events since last check - GEM pipeline is writing."
-             if delta > 0 else
-             "WARN: no new events since last check (ok if idle; check if last event is stale).")
+            r.append(col(f"      - {d}: {n}", RED))
+    r.append(col("==================================================================", TITLE))
+    if delta > 0:
+        r.append(col("OK: new events since last check - GEM pipeline is writing.", GREEN))
+    else:
+        r.append(col("WARN: no new events since last check (ok if idle; check if last event is stale).", YELLOW))
     print("\n".join(r))
 
 
