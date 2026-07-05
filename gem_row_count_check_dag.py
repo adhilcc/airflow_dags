@@ -87,33 +87,33 @@ def gem_row_counts(**_):
     prev_id = int(Variable.get("GEM_PREV_MAX_EVENT_ID", default_var="0") or 0)
     Variable.set("GEM_PREV_MAX_EVENT_ID", str(max_id))
     delta = max_id - prev_id
-    # ANSI colour so the report stands out from surrounding logs. Toggle off with the
-    # GEM_REPORT_COLOR Variable = "0" if your log viewer shows raw escape codes.
-    use_color = Variable.get("GEM_REPORT_COLOR", default_var="1") == "1"
-
-    def col(s, code):
-        return f"\033[{code}m{s}\033[0m" if use_color else s
-
-    CYAN, GREEN, YELLOW, RED, TITLE = "96", "92", "93", "91", "1;96"
-    r = [col("================= GEM PIPELINE REPORT (last 24h) =================", TITLE)]
-    r.append(col(f"  liveness      : latest event_id={max_id}  (+{delta} since last check)", CYAN))
-    r.append(col(f"  last event at : {last_ts}", CYAN))
-    r.append(col(f"  DAGs tracked  : {dags_tracked}   |   DAGs active (24h): {active_dags}", CYAN))
-    r.append(col(f"  runs started  : {started}", CYAN))
-    r.append(col(f"  runs success  : {succeeded}", CYAN))
-    r.append(col(f"  runs failed   : {failed}", RED if failed else CYAN))
-    r.append(col(f"  success rate  : {rate}  ({succeeded}/{completed} completed)", CYAN))
-    r.append(col(f"  task failures : {task_failed}", RED if task_failed else CYAN))
+    # The Airflow web UI strips ANSI colour codes, so we use emoji instead - browsers
+    # render them as COLOUR glyphs (green check / red cross / amber warning), which is
+    # how the report shows colour in the UI log. Falls back to ASCII if the runtime
+    # locale can't encode emoji (so the monitor never fails on a print).
+    r = ["================= GEM PIPELINE REPORT (last 24h) ================="]
+    r.append(f"  \U0001F4CA liveness      : latest event_id={max_id}  (+{delta} since last check)")
+    r.append(f"  \U0001F551 last event    : {last_ts}")
+    r.append(f"  \U0001F4DA DAGs tracked  : {dags_tracked}   |   active (24h): {active_dags}")
+    r.append(f"  ▶️  runs started  : {started}")
+    r.append(f"  ✅ runs success  : {succeeded}")
+    r.append(f"  ❌ runs failed   : {failed}")
+    r.append(f"  \U0001F4C8 success rate  : {rate}  ({succeeded}/{completed} completed)")
+    r.append(f"  ⚠️  task failures : {task_failed}")
     if top_fail:
-        r.append(col("  top failing DAGs (24h):", CYAN))
+        r.append("  \U0001F53B top failing DAGs (24h):")
         for d, n in top_fail:
-            r.append(col(f"      - {d}: {n}", RED))
-    r.append(col("==================================================================", TITLE))
+            r.append(f"        - {d}: {n}")
+    r.append("==================================================================")
     if delta > 0:
-        r.append(col("OK: new events since last check - GEM pipeline is writing.", GREEN))
+        r.append("✅ OK: new events since last check - GEM pipeline is writing.")
     else:
-        r.append(col("WARN: no new events since last check (ok if idle; check if last event is stale).", YELLOW))
-    print("\n".join(r))
+        r.append("⚠️  WARN: no new events since last check (ok if idle; check if last event is stale).")
+    msg = "\n".join(r)
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        print(msg.encode("ascii", "replace").decode("ascii"))
 
 
 with DAG(
