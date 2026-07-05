@@ -50,21 +50,61 @@ def _gem_engine():
 
 
 def gem_row_counts(**_):
+    """GEM pipeline health report. Cheap by design: MAX(event_id) (indexed PK) for
+    liveness, plus a 24h window aggregated over the indexed event_timestamp (a bounded
+    range scan, NOT a full-table scan). Grouping is summed in Python so the SQL is
+    dialect-agnostic. Fails only on a real connect/query error; otherwise it just prints
+    the report (a flat delta is a WARN, fine when the system is idle)."""
+    from datetime import datetime, timedelta, timezone
+    ev = f"{GEM_SCHEMA}.airflow_events"
+    md = f"{GEM_SCHEMA}.dag_metadata"
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
     with _gem_engine().connect() as c:
-        ev = c.execute(text(f"SELECT COUNT(*) FROM {GEM_SCHEMA}.airflow_events")).scalar()
-        md = c.execute(text(f"SELECT COUNT(*) FROM {GEM_SCHEMA}.dag_metadata")).scalar()
-        last_ing = c.execute(text(f"SELECT MAX(ingested_at) FROM {GEM_SCHEMA}.airflow_events")).scalar()
-    prev_ev = int(Variable.get("GEM_PREV_EVENTS_COUNT", default_var="0") or 0)
-    prev_md = int(Variable.get("GEM_PREV_METADATA_COUNT", default_var="0") or 0)
-    Variable.set("GEM_PREV_EVENTS_COUNT", str(ev))
-    Variable.set("GEM_PREV_METADATA_COUNT", str(md))
-    print(f"airflow_events: {ev} rows (prev {prev_ev}, delta +{ev - prev_ev}); last ingested_at = {last_ing}")
-    print(f"dag_metadata:   {md} rows (prev {prev_md}, delta +{md - prev_md})")
-    if ev - prev_ev > 0:
-        print("OK: airflow_events grew since last check - GEM pipeline is writing.")
-    else:
-        print("WARN: airflow_events flat since last check (ok if no DAG runs occurred; "
-              "investigate if this persists or last ingested_at is stale).")
+        max_id = c.execute(text(f"SELECT MAX(event_id) FROM {ev}")).scalar() or 0
+        last_ts = c.execute(text(f"SELECT MAX(event_timestamp) FROM {ev}")).scalar()
+        dags_tracked = c.execute(text(f"SELECT COUNT(*) FROM {md}")).scalar()
+        run_rows = c.execute(text(
+            f"SELECT event_status, COUNT(*) FROM {ev} "
+            "WHERE event_type='dag_run' AND event_timestamp >= :cut GROUP BY event_status"),
+            {"cut": cutoff}).fetchall()
+        task_failed = c.execute(text(
+            f"SELECT COUNT(*) FROM {ev} WHERE event_type='task_instance' "
+            "AND event_status='failed' AND event_timestamp >= :cut"), {"cut": cutoff}).scalar()
+        active_dags = c.execute(text(
+            f"SELECT COUNT(DISTINCT dag_id) FROM {ev} "
+            "WHERE event_type='dag_run' AND event_timestamp >= :cut"), {"cut": cutoff}).scalar()
+        fail_rows = c.execute(text(
+            f"SELECT dag_id, COUNT(*) FROM {ev} WHERE event_type='dag_run' "
+            "AND event_status='failed' AND event_timestamp >= :cut GROUP BY dag_id"),
+            {"cut": cutoff}).fetchall()
+    outcomes = {str(s).lower(): int(n) for s, n in run_rows}
+    started = outcomes.get("running", 0)
+    succeeded = outcomes.get("success", 0)
+    failed = outcomes.get("failed", 0)
+    completed = succeeded + failed
+    rate = f"{100.0 * succeeded / completed:.1f}%" if completed else "n/a"
+    top_fail = sorted(((d, int(n)) for d, n in fail_rows), key=lambda x: x[1], reverse=True)[:5]
+    prev_id = int(Variable.get("GEM_PREV_MAX_EVENT_ID", default_var="0") or 0)
+    Variable.set("GEM_PREV_MAX_EVENT_ID", str(max_id))
+    delta = max_id - prev_id
+    r = ["================= GEM PIPELINE REPORT (last 24h) ================="]
+    r.append(f"  liveness      : latest event_id={max_id}  (+{delta} since last check)")
+    r.append(f"  last event at : {last_ts}")
+    r.append(f"  DAGs tracked  : {dags_tracked}   |   DAGs active (24h): {active_dags}")
+    r.append(f"  runs started  : {started}")
+    r.append(f"  runs success  : {succeeded}")
+    r.append(f"  runs failed   : {failed}")
+    r.append(f"  success rate  : {rate}  ({succeeded}/{completed} completed)")
+    r.append(f"  task failures : {task_failed}")
+    if top_fail:
+        r.append("  top failing DAGs (24h):")
+        for d, n in top_fail:
+            r.append(f"      - {d}: {n}")
+    r.append("==================================================================")
+    r.append("OK: new events since last check - GEM pipeline is writing."
+             if delta > 0 else
+             "WARN: no new events since last check (ok if idle; check if last event is stale).")
+    print("\n".join(r))
 
 
 with DAG(
